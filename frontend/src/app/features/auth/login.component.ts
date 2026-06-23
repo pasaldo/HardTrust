@@ -28,26 +28,25 @@ import { AuthService } from '../../core/services/auth.service';
   `
 })
 export class LoginComponent {
-  email = '';
-  password = '';
-  loading = false;
-  error = '';
+  email = ''
+  password = ''
+  loading = false
+  error = ''
   constructor(private auth: AuthService, private router: Router) {}
 
   submit(e: Event) {
-    e.preventDefault();
-    this.loading = true;
-    this.error = '';
+    e.preventDefault()
+    this.loading = true
+    this.error = ''
     this.auth.login({ email: this.email, password: this.password }).subscribe({
       next: (res: any) => {
-        this.auth.saveSession(res);
-        this.router.navigateByUrl('/listings');
+        this.auth.saveSession(res)
+        this.router.navigateByUrl('/profile')
       },
       error: (err: any) => {
-        this.error = err?.error?.detail || 'Error al iniciar sesión.';
-        this.loading = false;
+        this.error = err?.error?.detail || 'Error al iniciar sesión.'
       },
       complete: () => (this.loading = false)
-    });
+    })
   }
 }

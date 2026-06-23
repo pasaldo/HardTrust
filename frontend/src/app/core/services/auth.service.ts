@@ -11,6 +11,10 @@ export interface RegisterPayload {
   email: string;
   username: string;
   password: string;
+  first_name: string;
+  last_name: string;
+  rut: string;
+  phone: string;
 }
 
 export interface AuthResponse {
@@ -18,6 +22,10 @@ export interface AuthResponse {
     id: number;
     email: string;
     username: string;
+    first_name: string;
+    last_name: string;
+    rut: string;
+    phone: string;
     reputation: number;
     created_at: string;
     updated_at: string;

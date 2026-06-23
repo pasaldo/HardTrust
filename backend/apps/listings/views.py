@@ -1,4 +1,5 @@
 from rest_framework import generics, filters
+from rest_framework.response import Response
 from django.db import transaction
 from django.shortcuts import get_object_or_404
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -7,6 +8,14 @@ from apps.listings.models import Category, PhysicalCondition, Listing
 from apps.listings.serializers import CategorySerializer, CategoryCreateSerializer, PhysicalConditionSerializer, ListingSerializer
 from apps.ml_orchestration.services import evaluate_listing
 from apps.ml_orchestration.models import ListingRiskEvaluation
+
+
+class BrandList(generics.ListAPIView):
+    permission_classes = [AllowAny]
+
+    def list(self, request, *args, **kwargs):
+        brands = Listing.objects.values_list("brand", flat=True).distinct().order_by("brand")
+        return Response(sorted([b for b in brands if b]))
 
 
 class CategoryListCreate(generics.ListCreateAPIView):

@@ -30,13 +30,13 @@ interface Listing {
       <div class="nav-content">
         <a routerLink="/listings" class="logo">HardTrust</a>
         <div class="nav-links">
-          <a routerLink="/listings" routerLinkActive="active">Inicio</a>
-          <a routerLink="/listings?category=1" routerLinkActive="active">CPU</a>
-          <a routerLink="/listings?category=2" routerLinkActive="active">GPU</a>
-          <a routerLink="/listings?category=3" routerLinkActive="active">RAM</a>
-          <a routerLink="/listings?category=4" routerLinkActive="active">SSD</a>
-          <a routerLink="/listings?category=5" routerLinkActive="active">HDD</a>
-          <a routerLink="/listings?category=6" routerLinkActive="active">PSU</a>
+          <a routerLink="/listings">Inicio</a>
+          <a routerLink="/listings?category=1">CPU</a>
+          <a routerLink="/listings?category=2">GPU</a>
+          <a routerLink="/listings?category=3">RAM</a>
+          <a routerLink="/listings?category=4">SSD</a>
+          <a routerLink="/listings?category=5">HDD</a>
+          <a routerLink="/listings?category=6">PSU</a>
           <a routerLink="/profile" class="nav-profile">Mi perfil</a>
         </div>
       </div>
@@ -47,10 +47,6 @@ interface Listing {
         <h1>Marketplace de hardware de PC</h1>
         <p>Compra y vende componentes usados con confianza</p>
         <div class="search-bar">
-          <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="11" cy="11" r="8"></circle>
-            <path d="m21 21-4.35-4.35"></path>
-          </svg>
           <input [(ngModel)]="search" placeholder="Buscar por nombre, marca o modelo..." />
           <button (click)="refresh()">Buscar</button>
         </div>
@@ -67,7 +63,7 @@ interface Listing {
           </select>
         </div>
         <div class="filter-group">
-          <label class="filter-label">Tipo</label>
+          <label class="filter-label">Tipo de hardware</label>
           <select (change)="onHardwareChange($event)">
             <option value="">Cualquiera</option>
             <option value="cpu">CPU</option>
@@ -79,6 +75,17 @@ interface Listing {
             <option value="motherboard">Placa madre</option>
             <option value="cooler">Refrigeración</option>
           </select>
+        </div>
+        <div class="filter-group">
+          <label class="filter-label">Marca</label>
+          <select [(ngModel)]="brand">
+            <option value="">Cualquier marca</option>
+            <option *ngFor="let b of brands" [value]="b">{{ b }}</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label class="filter-label">Modelo</label>
+          <input [(ngModel)]="model" placeholder="Ej: RTX 3070" />
         </div>
         <div class="filter-group">
           <label class="filter-label">Precio mínimo</label>
@@ -112,21 +119,18 @@ interface Listing {
               <p class="card-brand">{{ l.brand }} {{ l.model }}</p>
               <div class="card-footer-row">
                 <span class="card-price">${{ l.price }}</span>
-                <span class="card-risk" [class.low]="l.risk_level === 'LOW'" [class.medium]="l.risk_level === 'MEDIUM'" [class.high]="l.risk_level === 'HIGH'">
-                  {{ l.risk_level || 'N/A' }}
-                </span>
+                <span class="card-chip">{{ l.hardware_type }}</span>
               </div>
-              <p class="card-seller">Por {{ l.seller_name }} · Rep: {{ l.seller_reputation }}</p>
             </div>
           </a>
         </article>
       </div>
 
-      <div class="empty-state" *ngIf="!listings.length && !search">
+      <div class="empty-state" *ngIf="!listings.length && !hasFilters">
         <p>No hay publicaciones aún. ¡Sé el primero en publicar!</p>
       </div>
-      <div class="empty-state" *ngIf="search && !listings.length">
-        <p>No se encontraron resultados para "{{ search }}"</p>
+      <div class="empty-state" *ngIf="hasFilters && !listings.length">
+        <p>No se encontraron resultados con los filtros seleccionados.</p>
       </div>
     </section>
   `,
@@ -205,10 +209,6 @@ interface Listing {
       padding: 6px 6px 6px 14px;
       max-width: 560px;
       width: 100%;
-    }
-    .search-icon {
-      color: #64748b;
-      flex-shrink: 0;
     }
     .search-bar input {
       flex: 1;
@@ -391,31 +391,16 @@ interface Listing {
       color: #fff;
       margin: 0;
     }
-    .card-risk {
+    .card-chip {
       font-size: 11px;
       font-weight: 700;
       padding: 3px 8px;
       border-radius: 999px;
       text-transform: uppercase;
+      background: #1e293b;
+      color: #94a3b8;
+      border: 1px solid #334155;
     }
-    .card-risk.low {
-      background: #14532d;
-      color: #86efac;
-    }
-    .card-risk.medium {
-      background: #854d0e;
-      color: #fef08a;
-    }
-    .card-risk.high {
-      background: #7f1d1d;
-      color: #fecaca;
-    }
-    .card-seller {
-      margin: 8px 0 0;
-      font-size: 12px;
-      color: #64748b;
-    }
-
     .empty-state {
       text-align: center;
       padding: 48px 20px;
@@ -427,17 +412,27 @@ interface Listing {
 export class ListingListComponent implements OnInit {
   listings: Listing[] = [];
   categories: any[] = [];
+  brands: string[] = [];
   minPrice: number | null = null;
   maxPrice: number | null = null;
   category = '';
   hardware = '';
+  brand = '';
+  model = '';
   search = '';
+  get hasFilters() {
+    return !!(this.category || this.hardware || this.brand || this.model || this.minPrice != null || this.maxPrice != null || this.search);
+  }
   private base = 'http://127.0.0.1:8000/api/listings';
   constructor(private http: HttpClient) {}
 
   ngOnInit() {
     this.http.get<any[]>(`${this.base}/categories/`).subscribe({
       next: (data) => (this.categories = data || []),
+      error: (err) => console.error(err)
+    });
+    this.http.get<string[]>(`${this.base}/brands/`).subscribe({
+      next: (data) => (this.brands = data || []),
       error: (err) => console.error(err)
     });
     this.refresh();
@@ -459,6 +454,8 @@ export class ListingListComponent implements OnInit {
     const params: string[] = [];
     if (this.category) params.push(`category=${this.category}`);
     if (this.hardware) params.push(`hardware_type=${this.hardware}`);
+    if (this.brand) params.push(`brand=${encodeURIComponent(this.brand)}`);
+    if (this.model) params.push(`model=${encodeURIComponent(this.model)}`);
     if (this.minPrice != null && this.minPrice !== '') params.push(`min_price=${this.minPrice}`);
     if (this.maxPrice != null && this.maxPrice !== '') params.push(`max_price=${this.maxPrice}`);
     if (this.search) params.push(`search=${encodeURIComponent(this.search)}`);
