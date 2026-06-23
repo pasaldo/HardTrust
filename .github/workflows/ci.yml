@@ -1,0 +1,77 @@
+name: HardTrust CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+
+jobs:
+  backend-test:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: ./backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install backend dependencies
+        run: |
+          python -m venv venv
+          .\venv\Scripts\activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Run backend migrations
+        run: |
+          .\venv\Scripts\activate
+          python manage.py migrate --run-syncdb
+      - name: Run backend tests
+        run: |
+          .\venv\Scripts\activate
+          python manage.py test apps.users.tests apps.listings.tests apps.messaging.tests apps.ml_orchestration.tests
+
+  frontend-build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: ./frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install frontend dependencies
+        run: npm ci
+      - name: Build Angular app
+        run: npx ng build --configuration=production
+
+  ml-service-test:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: ./ml-service
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install ML dependencies
+        run: |
+          python -m venv venv
+          .\venv\Scripts\activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Test ML service import
+        run: |
+          .\venv\Scripts\activate
+          python -c "from app.main import app; print('ML service import OK')"
+
+  integration-check:
+    needs: [backend-test, frontend-build, ml-service-test]
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Placeholder integration check
+        run: echo "CI passed. Deployment should follow seperate pipeline or manual release."
