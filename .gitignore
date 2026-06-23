@@ -2,20 +2,21 @@
 __pycache__/
 *.pyc
 *.pyo
-.env
-.venv/
+*.pyd
+.Python
+env/
 venv/
+.venv/
 *.sqlite3
 db.sqlite3
-/media
-/staticfiles
 
 # Node
 node_modules/
 dist/
-frontend/dist/
+tmp/
+.cache/
 
-# IDE
+# IDEs
 .idea/
 .vscode/
 *.swp
@@ -23,12 +24,19 @@ frontend/dist/
 
 # OS
 Thumbs.db
-ehthumbs.db
-Desktop.ini
+.DS_Store
 
-# Backups
-backend_backup_*/
-*.bak
+# Angular
+frontend/node_modules/
+frontend/dist/
+frontend/tmp/
 
-# Project status cache
-project-status.json
+# Backend static
+backend/staticfiles/
+backend/media/
+
+# Misc
+*.log
+.env
+.env.local
+.hermes/

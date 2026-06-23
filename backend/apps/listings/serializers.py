@@ -27,10 +27,32 @@ class PhysicalConditionSerializer(serializers.ModelSerializer):
 class ListingSerializer(serializers.ModelSerializer):
     seller_name = serializers.SerializerMethodField()
     seller_reputation = serializers.FloatField(source="seller.reputation", read_only=True)
+    category_name = serializers.CharField(source="category.name", read_only=True)
+    condition_name = serializers.CharField(source="condition.name", read_only=True)
 
     class Meta:
         model = Listing
-        fields = "__all__"
+        fields = [
+            "id",
+            "title",
+            "description",
+            "price",
+            "status",
+            "risk_level",
+            "images",
+            "category",
+            "category_name",
+            "condition",
+            "condition_name",
+            "hardware_type",
+            "brand",
+            "model",
+            "seller",
+            "seller_name",
+            "seller_reputation",
+            "created_at",
+            "updated_at",
+        ]
         read_only_fields = ("seller",)
 
     def get_seller_name(self, obj):
