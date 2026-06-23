@@ -1,9 +1,9 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { HttpClient } from '@angular/common/http';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 
+import { HttpClient } from '@angular/common/http';
 interface Listing {
   id: number;
   title: string;
@@ -24,7 +24,7 @@ interface Listing {
 @Component({
   selector: 'app-listing-list',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, HttpClient],
+  imports: [CommonModule, RouterModule, FormsModule],
   template: `
     <nav class="navbar">
       <div class="nav-content">
@@ -118,7 +118,7 @@ interface Listing {
               <h3 class="card-title">{{ l.title }}</h3>
               <p class="card-brand">{{ l.brand }} {{ l.model }}</p>
               <div class="card-footer-row">
-                <span class="card-price">${{ l.price }}</span>
+                <span class="card-price">{{ l.price }}</span>
                 <span class="card-chip">{{ l.hardware_type }}</span>
               </div>
             </div>
@@ -436,12 +436,12 @@ export class ListingListComponent implements OnInit {
 
   ngOnInit() {
     this.http.get<any[]>(`${this.base}/categories/`).subscribe({
-      next: (data) => (this.categories = data || []),
-      error: (err) => console.error(err)
+      next: (data: any) => (this.categories = data || []),
+      error: (err: any) => console.error(err)
     });
     this.http.get<string[]>(`${this.base}/brands/`).subscribe({
-      next: (data) => (this.brands = data || []),
-      error: (err) => console.error(err)
+      next: (data: any) => (this.brands = data || []),
+      error: (err: any) => console.error(err)
     });
     this.refresh();
   }
@@ -483,8 +483,8 @@ export class ListingListComponent implements OnInit {
     }
     const qs = params.length ? '?' + params.join('&') : '';
     this.http.get<any[]>(`${this.base}/browse/${qs}`).subscribe({
-      next: (data) => (this.listings = data || []),
-      error: (err) => console.error(err)
+      next: (data: any) => (this.listings = data || []),
+      error: (err: any) => console.error(err)
     });
   }
 }

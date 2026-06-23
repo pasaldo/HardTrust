@@ -1,9 +1,9 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { HttpClient } from '@angular/common/http';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 
+import { HttpClient } from '@angular/common/http';
 interface Listing {
   id: number;
   title: string;
@@ -24,7 +24,7 @@ interface Listing {
 @Component({
   selector: 'app-profile',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, HttpClient],
+  imports: [CommonModule, RouterModule, FormsModule],
   template: `
     <nav class="navbar">
       <div class="nav-content">
@@ -444,14 +444,14 @@ export class ProfileComponent implements OnInit {
 
   ngOnInit() {
     this.http.get<any>(`${this.base}/profile/`).subscribe({
-      next: (data) => {
+      next: (data: any) => {
         this.user = data;
         this.http.get<any[]>(`${this.listingsBase}/listings/?seller=${data.id}`).subscribe({
-          next: (items) => (this.myListings = items || []),
-          error: (err) => console.error(err)
+          next: (items: any) => (this.myListings = items || []),
+          error: (err: any) => console.error(err)
         });
       },
-      error: (err) => console.error(err)
+      error: (err: any) => console.error(err)
     });
   }
 }

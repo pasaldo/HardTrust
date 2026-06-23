@@ -1,9 +1,9 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 
+import { HttpClient } from '@angular/common/http';
 interface Listing {
   id: number;
   title: string;
@@ -24,7 +24,7 @@ interface Listing {
 @Component({
   selector: 'app-listing-detail',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, HttpClient],
+  imports: [CommonModule, RouterModule, FormsModule],
   template: `
     <nav class="navbar">
       <div class="nav-content">
@@ -42,30 +42,30 @@ interface Listing {
       </div>
     </nav>
 
-    <div class="page" *ngIf="listing; else loading">
+    <div class="page" *ngIf="listing as item; else loading">
       <div class="breadcrumb">
         <a routerLink="/listings">Inicio</a>
         <span class="separator">/</span>
-        <span>{{ listing.title }}</span>
+        <span>{{ item.title }}</span>
       </div>
 
       <div class="product-layout">
         <div class="gallery">
           <div class="main-image">
             <img
-              *ngIf="listing.images?.length; else noImage"
-              [src]="listing.images[0]"
-              [alt]="listing.title"
+              *ngIf="item.images?.length; else noImage"
+              [src]="item.images[0]"
+              [alt]="item.title"
             />
             <ng-template #noImage>
               <div class="no-image"><span>Sin imagen</span></div>
             </ng-template>
           </div>
-          <div class="thumbnails" *ngIf="listing.images?.length > 1">
+          <div class="thumbnails" *ngIf="item && item.images && item.images.length > 1">
             <img
-              *ngFor="let img of listing.images"
+              *ngFor="let img of item.images"
               [src]="img"
-              [alt]="listing.title"
+              [alt]="item.title"
               class="thumb"
             />
           </div>
@@ -73,35 +73,35 @@ interface Listing {
 
         <div class="product-info">
           <div class="product-main">
-            <h1 class="product-title">{{ listing.title }}</h1>
+            <h1 class="product-title">{{ item.title }}</h1>
             <div class="product-meta-row">
-              <span class="badge category-badge">{{ listing.category_name }}</span>
-              <span class="badge condition-badge">{{ listing.hardware_type }}</span>
-              <span class="badge state-badge" [class.pending]="listing.status === 'PENDING'" [class.active]="listing.status === 'ACTIVE'">
-                {{ listing.status }}
+              <span class="badge category-badge">{{ item.category_name }}</span>
+              <span class="badge condition-badge">{{ item.hardware_type }}</span>
+              <span class="badge state-badge" [class.pending]="item.status === 'PENDING'" [class.active]="item.status === 'ACTIVE'">
+                {{ item.status }}
               </span>
             </div>
-            <h2 class="product-price">${{ listing.price }} CLP</h2>
-            <p class="product-desc">{{ listing.description }}</p>
+            <h2 class="product-price">{{ item.price }} CLP</h2>
+            <p class="product-desc">{{ item.description }}</p>
 
             <div class="specs-card">
               <h3>Especificaciones</h3>
               <div class="specs-grid">
                 <div class="spec-item">
                   <span class="spec-label">Marca</span>
-                  <span class="spec-value">{{ listing.brand }}</span>
+                  <span class="spec-value">{{ item.brand }}</span>
                 </div>
                 <div class="spec-item">
                   <span class="spec-label">Modelo</span>
-                  <span class="spec-value">{{ listing.model }}</span>
+                  <span class="spec-value">{{ item.model }}</span>
                 </div>
                 <div class="spec-item">
                   <span class="spec-label">Categoría</span>
-                  <span class="spec-value">{{ listing.category_name }}</span>
+                  <span class="spec-value">{{ item.category_name }}</span>
                 </div>
                 <div class="spec-item">
                   <span class="spec-label">Tipo</span>
-                  <span class="spec-value">{{ listing.hardware_type }}</span>
+                  <span class="spec-value">{{ item.hardware_type }}</span>
                 </div>
               </div>
             </div>
@@ -109,13 +109,13 @@ interface Listing {
 
           <div class="seller-card">
             <div class="seller-avatar">
-              {{ sellerInitials }}
+              {{ initials }}
             </div>
             <div class="seller-info">
-              <h4>{{ listing.seller_name }}</h4>
+              <h4>{{ item.seller_name }}</h4>
               <div class="reputation-row">
-                <span class="reputation-stars">{{ sellerStars }}</span>
-                <span class="reputation-text">{{ listing.seller_reputation.toFixed(1) }} / 5.0</span>
+                <span class="reputation-stars">{{ stars }}</span>
+                <span class="reputation-text">{{ item.seller_reputation.toFixed(1) }} / 5.0</span>
               </div>
             </div>
             <button class="contact-btn">Contactar vendedor</button>
@@ -458,7 +458,7 @@ interface Listing {
 export class ListingDetailComponent implements OnInit {
   listing: Listing | null = null;
 
-  get sellerInitials(): string {
+  get initials(): string {
     const name = this.listing?.seller_name || '';
     const parts = name.trim().split(' ');
     const first = parts[0] ? parts[0][0] : '';
@@ -466,7 +466,7 @@ export class ListingDetailComponent implements OnInit {
     return (first + last).toUpperCase() || '?';
   }
 
-  get sellerStars(): string {
+  get stars(): string {
     const rep = this.listing?.seller_reputation ?? 0;
     const full = Math.floor(rep);
     const half = rep - full >= 0.5;
@@ -481,7 +481,7 @@ export class ListingDetailComponent implements OnInit {
     const id = this.route.snapshot.paramMap.get('id');
     if (!id) return;
     this.http.get<Listing>(`${this.base}/listings/${id}/`).subscribe({
-      next: (data) => {
+      next: (data: any) => {
         this.listing = {
           ...data,
           hardware_type: data.hardware_type || 'N/A',
@@ -491,7 +491,7 @@ export class ListingDetailComponent implements OnInit {
           category_name: data.category_name || `Cat. ${data.category}`
         };
       },
-      error: (err) => console.error(err)
+      error: (err: any) => console.error(err)
     });
   }
 }
