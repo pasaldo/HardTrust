@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
-import { RouterModule } from '@angular/router';
+import { ActivatedRoute, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 
 interface Listing {
@@ -52,15 +52,22 @@ interface Listing {
       <div class="product-layout">
         <div class="gallery">
           <div class="main-image">
-            <img *ngIf="listing.images?.length; else noImage" [src]="listing.images[0]" [alt]="listing.title" />
+            <img
+              *ngIf="listing.images?.length; else noImage"
+              [src]="listing.images[0]"
+              [alt]="listing.title"
+            />
             <ng-template #noImage>
-              <div class="no-image">
-                <span>Sin imagen</span>
-              </div>
+              <div class="no-image"><span>Sin imagen</span></div>
             </ng-template>
           </div>
           <div class="thumbnails" *ngIf="listing.images?.length > 1">
-            <img *ngFor="let img of listing.images" [src]="img" [alt]="listing.title" class="thumb" />
+            <img
+              *ngFor="let img of listing.images"
+              [src]="img"
+              [alt]="listing.title"
+              class="thumb"
+            />
           </div>
         </div>
 
@@ -76,7 +83,7 @@ interface Listing {
             </div>
             <h2 class="product-price">${{ listing.price }} CLP</h2>
             <p class="product-desc">{{ listing.description }}</p>
-            
+
             <div class="specs-card">
               <h3>Especificaciones</h3>
               <div class="specs-grid">
@@ -102,12 +109,12 @@ interface Listing {
 
           <div class="seller-card">
             <div class="seller-avatar">
-              {{ listing.seller_name.charAt(0).toUpperCase() }}
+              {{ sellerInitials }}
             </div>
             <div class="seller-info">
               <h4>{{ listing.seller_name }}</h4>
               <div class="reputation-row">
-                <span class="reputation-stars">{{ getStars(listing.seller_reputation) }}</span>
+                <span class="reputation-stars">{{ sellerStars }}</span>
                 <span class="reputation-text">{{ listing.seller_reputation.toFixed(1) }} / 5.0</span>
               </div>
             </div>
@@ -172,8 +179,8 @@ interface Listing {
     .nav-profile {
       padding: 8px 18px;
       border-radius: 10px;
-      background: #1e293b !important;
-      color: #fff !important;
+      background: #1e293b;
+      color: #fff;
       border: 1px solid #334155;
     }
 
@@ -450,10 +457,27 @@ interface Listing {
 })
 export class ListingDetailComponent implements OnInit {
   listing: Listing | null = null;
-  private base = 'http://127.0.0.1:8000/api/listings';
-  constructor(private http: HttpClient, private route: import('@angular/router').ActivatedRoute) {}
 
-  ngOnInit() {
+  get sellerInitials(): string {
+    const name = this.listing?.seller_name || '';
+    const parts = name.trim().split(' ');
+    const first = parts[0] ? parts[0][0] : '';
+    const last = parts[1] ? parts[1][0] : '';
+    return (first + last).toUpperCase() || '?';
+  }
+
+  get sellerStars(): string {
+    const rep = this.listing?.seller_reputation ?? 0;
+    const full = Math.floor(rep);
+    const half = rep - full >= 0.5;
+    const stars = '★'.repeat(full) + (half ? '½' : '');
+    return stars || '☆';
+  }
+
+  private base = 'http://127.0.0.1:8000/api/listings';
+  constructor(private http: HttpClient, private route: ActivatedRoute) {}
+
+  ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
     if (!id) return;
     this.http.get<Listing>(`${this.base}/listings/${id}/`).subscribe({
@@ -469,14 +493,5 @@ export class ListingDetailComponent implements OnInit {
       },
       error: (err) => console.error(err)
     });
-  }
-
-  getStars(rep: number): string {
-    const full = Math.floor(rep);
-    const half = rep - full >= 0.5;
-    let s = '';
-    for (let i = 0; i < full; i++) s += '★';
-    if (half) s += '½';
-    return s || '☆';
   }
 }
