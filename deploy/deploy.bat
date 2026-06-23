@@ -35,7 +35,7 @@ pip install -r requirements.txt
 
 echo [3/4] Building frontend for production...
 cd /d %FRONTEND_DIR%
-call npm ci
+call npm install
 call npx ng build --configuration=production
 
 echo [4/4] Starting services...

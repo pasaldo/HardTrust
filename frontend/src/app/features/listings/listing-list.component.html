@@ -1,0 +1,8 @@
+<h2>Listings</h2>
+<button (click)="refresh()">Recargar</button>
+<ul *ngIf="listings.length; else empty">
+  <li *ngFor="let l of listings">
+    <strong>{{ l.title }}</strong> — {{ l.price }} — <em>{{ l.status }}</em> ({{ l.risk_level }})
+  </li>
+</ul>
+<ng-template #empty><p>No listings.</p></ng-template>

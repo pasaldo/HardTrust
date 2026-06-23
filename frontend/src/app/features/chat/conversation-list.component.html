@@ -1,0 +1,6 @@
+<h2>Conversaciones</h2>
+<button (click)="refresh()">Recargar</button>
+<ul *ngIf="items.length; else empty">
+  <li *ngFor="let c of items">Conversación #{{ c.id }} — {{ c.created_at }}</li>
+</ul>
+<ng-template #empty><p>No conversations.</p></ng-template>

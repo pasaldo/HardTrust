@@ -1,0 +1,17 @@
+<h2>ML Panel</h2>
+<form (ngSubmit)="predict($event)">
+  <div>
+    <input [(ngModel)]="title" name="title" placeholder="Título" />
+  </div>
+  <div>
+    <input [(ngModel)]="price" name="price" type="number" placeholder="Precio" />
+  </div>
+  <div>
+    <input [(ngModel)]="reputation" name="reputation" type="number" placeholder="Reputación" />
+  </div>
+  <div>
+    <input [(ngModel)]="images" name="images" type="number" placeholder="Imágenes" />
+  </div>
+  <button type="submit">Evaluar</button>
+</form>
+<pre *ngIf="result">{{ result | json }}</pre>
