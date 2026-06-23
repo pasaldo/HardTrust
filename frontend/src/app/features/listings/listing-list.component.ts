@@ -56,7 +56,7 @@ interface Listing {
     <section class="page">
       <div class="filters-bar">
         <div class="filter-group">
-          <label class="filter-label">Categoría</label>
+          <label class="filter-label">Categoria</label>
           <select (change)="onCategoryChange($event)">
             <option value="">Todas</option>
             <option *ngFor="let c of categories" [value]="c.id">{{ c.name }}</option>
@@ -73,7 +73,7 @@ interface Listing {
             <option value="hdd">HDD</option>
             <option value="psu">PSU</option>
             <option value="motherboard">Placa madre</option>
-            <option value="cooler">Refrigeración</option>
+            <option value="cooler">Refrigeracion</option>
           </select>
         </div>
         <div class="filter-group">
@@ -88,11 +88,11 @@ interface Listing {
           <input [(ngModel)]="model" placeholder="Ej: RTX 3070" />
         </div>
         <div class="filter-group">
-          <label class="filter-label">Precio mínimo</label>
+          <label class="filter-label">Precio minimo</label>
           <input type="number" [(ngModel)]="minPrice" placeholder="$0" />
         </div>
         <div class="filter-group">
-          <label class="filter-label">Precio máximo</label>
+          <label class="filter-label">Precio maximo</label>
           <input type="number" [(ngModel)]="maxPrice" placeholder="$999.999" />
         </div>
         <button class="filter-btn" (click)="refresh()">Filtrar</button>
@@ -127,7 +127,7 @@ interface Listing {
       </div>
 
       <div class="empty-state" *ngIf="!listings.length && !hasFilters">
-        <p>No hay publicaciones aún. ¡Sé el primero en publicar!</p>
+        <p>No hay publicaciones aun. Se el primero en publicar!</p>
       </div>
       <div class="empty-state" *ngIf="hasFilters && !listings.length">
         <p>No se encontraron resultados con los filtros seleccionados.</p>
@@ -421,7 +421,15 @@ export class ListingListComponent implements OnInit {
   model = '';
   search = '';
   get hasFilters() {
-    return !!(this.category || this.hardware || this.brand || this.model || this.minPrice != null || this.maxPrice != null || this.search);
+    return !!(
+      this.category ||
+      this.hardware ||
+      this.brand ||
+      this.model ||
+      this.minPrice != null ||
+      this.maxPrice != null ||
+      this.search
+    );
   }
   private base = 'http://127.0.0.1:8000/api/listings';
   constructor(private http: HttpClient) {}
@@ -452,13 +460,27 @@ export class ListingListComponent implements OnInit {
 
   refresh() {
     const params: string[] = [];
-    if (this.category) params.push(`category=${this.category}`);
-    if (this.hardware) params.push(`hardware_type=${this.hardware}`);
-    if (this.brand) params.push(`brand=${encodeURIComponent(this.brand)}`);
-    if (this.model) params.push(`model=${encodeURIComponent(this.model)}`);
-    if (this.minPrice != null && this.minPrice !== '') params.push(`min_price=${this.minPrice}`);
-    if (this.maxPrice != null && this.maxPrice !== '') params.push(`max_price=${this.maxPrice}`);
-    if (this.search) params.push(`search=${encodeURIComponent(this.search)}`);
+    if (this.category) {
+      params.push(`category=${this.category}`);
+    }
+    if (this.hardware) {
+      params.push(`hardware_type=${this.hardware}`);
+    }
+    if (this.brand) {
+      params.push(`brand=${encodeURIComponent(this.brand)}`);
+    }
+    if (this.model) {
+      params.push(`model=${encodeURIComponent(this.model)}`);
+    }
+    if (this.minPrice != null) {
+      params.push(`min_price=${this.minPrice}`);
+    }
+    if (this.maxPrice != null) {
+      params.push(`max_price=${this.maxPrice}`);
+    }
+    if (this.search) {
+      params.push(`search=${encodeURIComponent(this.search)}`);
+    }
     const qs = params.length ? '?' + params.join('&') : '';
     this.http.get<any[]>(`${this.base}/browse/${qs}`).subscribe({
       next: (data) => (this.listings = data || []),

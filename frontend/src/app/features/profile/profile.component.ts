@@ -7,14 +7,18 @@ import { FormsModule } from '@angular/forms';
 interface Listing {
   id: number;
   title: string;
+  description: string;
   price: string;
   status: string;
   risk_level: string;
   images: string[];
-  created_at: string;
+  category: number;
   hardware_type: string;
   brand: string;
   model: string;
+  seller: number;
+  seller_name: string;
+  seller_reputation: number;
 }
 
 @Component({
@@ -48,9 +52,9 @@ interface Listing {
             <p class="profile-email">{{ user.email }}</p>
             <div class="profile-tags">
               <span class="tag">RUT: {{ user.rut }}</span>
-              <span class="tag">Teléfono: {{ user.phone }}</span>
+              <span class="tag">Telefono: {{ user.phone }}</span>
               <span class="tag reputation-tag">
-                Reputación: ★ {{ user.reputation?.toFixed(1) || '0.0' }} / 5.0
+                Reputacion: {{ reputationStars }} {{ reputationNumber }}
               </span>
             </div>
           </div>
@@ -58,35 +62,29 @@ interface Listing {
       </div>
 
       <div class="tabs-nav">
-        <button (click)="tab = 'listings'" [class.active]="tab === 'listings'">
-          Mis publicaciones
-        </button>
-        <button (click)="tab = 'saved'" [class.active]="tab === 'saved'">
-          Guardados
-        </button>
-        <button (click)="tab = 'messages'" [class.active]="tab === 'messages'">
-          Mensajes
-        </button>
+        <button (click)="tab = 'listings'" [class.active]="tab === 'listings'">Mis publicaciones</button>
+        <button (click)="tab = 'saved'" [class.active]="tab === 'saved'">Guardados</button>
+        <button (click)="tab = 'messages'" [class.active]="tab === 'messages'">Mensajes</button>
       </div>
 
       <div class="tab-content">
         <section *ngIf="tab === 'listings'">
           <div class="grid" *ngIf="myListings.length; else noListings">
-            <article class="listing-card" *ngFor="let l of myListings">
-              <a [routerLink]="['/listings', l.id]">
+            <article class="listing-card" *ngFor="let item of myListings">
+              <a [routerLink]="['/listings', item.id]">
                 <div class="card-image">
-                  <img *ngIf="l.images?.length; else noImg" [src]="l.images[0]" [alt]="l.title" />
+                  <img *ngIf="item.images?.length; else noImg" [src]="item.images[0]" [alt]="item.title" />
                   <ng-template #noImg>
                     <div class="no-image">Sin imagen</div>
                   </ng-template>
-                  <span class="status-chip" [class.pending]="l.status === 'PENDING'" [class.active]="l.status === 'ACTIVE'">
-                    {{ l.status }}
+                  <span class="status-chip" [class.pending]="item.status === 'PENDING'" [class.active]="item.status === 'ACTIVE'">
+                    {{ item.status }}
                   </span>
                 </div>
                 <div class="card-body">
-                  <h3 class="card-title">{{ l.title }}</h3>
-                  <p class="card-brand">{{ l.brand }} {{ l.model }}</p>
-                  <p class="card-price">${{ l.price }}</p>
+                  <h3 class="card-title">{{ item.title }}</h3>
+                  <p class="card-brand">{{ item.brand }} {{ item.model }}</p>
+                  <p class="card-price">{{ item.price }}</p>
                 </div>
               </a>
             </article>
@@ -100,11 +98,11 @@ interface Listing {
         </section>
 
         <section *ngIf="tab === 'saved'" class="empty-state">
-          <p>Sección de publicaciones guardadas.</p>
+          <p>Seccion de publicaciones guardadas.</p>
         </section>
 
         <section *ngIf="tab === 'messages'" class="empty-state">
-          <p>Sección de mensajes.</p>
+          <p>Seccion de mensajes.</p>
         </section>
       </div>
     </div>
@@ -128,6 +126,7 @@ interface Listing {
       z-index: 50;
       background: #0f172a;
       border-bottom: 1px solid #1e293b;
+      backdrop-filter: blur(10px);
     }
     .nav-content {
       max-width: 1280px;
@@ -233,7 +232,6 @@ interface Listing {
       border: 1px solid #334155;
     }
     .reputation-tag {
-      background: #1e293b;
       color: #facc15;
       border-color: #854d0e;
     }
@@ -429,6 +427,16 @@ export class ProfileComponent implements OnInit {
     const fn = (this.user?.first_name || '').charAt(0).toUpperCase();
     const ln = (this.user?.last_name || '').charAt(0).toUpperCase();
     return `${fn}${ln}`;
+  }
+  get reputationStars(): string {
+    const rep = this.user?.reputation ?? 0;
+    const full = Math.floor(rep);
+    const stars = '★'.repeat(full);
+    return stars || '☆';
+  }
+  get reputationNumber(): string {
+    const rep = this.user?.reputation ?? 0;
+    return `${rep.toFixed(1)} / 5.0`;
   }
   private base = 'http://127.0.0.1:8000/api/users';
   private listingsBase = 'http://127.0.0.1:8000/api/listings';
