@@ -4,6 +4,8 @@ import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 
 import { HttpClient } from '@angular/common/http';
+import { AuthService } from '../../core/services/auth.service';
+import { Router } from '@angular/router';
 interface Listing {
   id: number;
   title: string;
@@ -26,22 +28,6 @@ interface Listing {
   standalone: true,
   imports: [CommonModule, RouterModule, FormsModule],
   template: `
-    <nav class="navbar">
-      <div class="nav-content">
-        <a routerLink="/listings" class="logo">HardTrust</a>
-        <div class="nav-links">
-          <a routerLink="/listings">Explorar</a>
-          <a routerLink="/listings?category=1">CPU</a>
-          <a routerLink="/listings?category=2">GPU</a>
-          <a routerLink="/listings?category=3">RAM</a>
-          <a routerLink="/listings?category=4">SSD</a>
-          <a routerLink="/listings?category=5">HDD</a>
-          <a routerLink="/listings?category=6">PSU</a>
-          <a routerLink="/profile" class="nav-profile active">Mi perfil</a>
-        </div>
-      </div>
-    </nav>
-
     <div class="page" *ngIf="user; else loading">
       <div class="profile-header-card">
         <div class="profile-banner"></div>
@@ -73,18 +59,18 @@ interface Listing {
             <article class="listing-card" *ngFor="let item of myListings">
               <a [routerLink]="['/listings', item.id]">
                 <div class="card-image">
-                  <img *ngIf="item.images?.length; else noImg" [src]="item.images[0]" [alt]="item.title" />
+                  <img *ngIf="item.images?.length; else noImg" [src]="resolveSrc(item)" [alt]="item.title" />
                   <ng-template #noImg>
                     <div class="no-image">Sin imagen</div>
                   </ng-template>
-                  <span class="status-chip" [class.pending]="item.status === 'PENDING'" [class.active]="item.status === 'ACTIVE'">
-                    {{ item.status }}
+                  <span class="status-chip" [class.pending]="item.status === 'PENDING'" [class.active]="item.status === 'ACTIVE' || item.status === 'APPROVED_BY_ML'">
+                    {{ statusLabel(item.status) }}
                   </span>
                 </div>
                 <div class="card-body">
                   <h3 class="card-title">{{ item.title }}</h3>
                   <p class="card-brand">{{ item.brand }} {{ item.model }}</p>
-                  <p class="card-price">{{ item.price }}</p>
+                  <p class="card-price">{{ formatPrice(item.price) }}</p>
                 </div>
               </a>
             </article>
@@ -120,56 +106,6 @@ interface Listing {
     </ng-template>
   `,
   styles: [`
-    .navbar {
-      position: sticky;
-      top: 0;
-      z-index: 50;
-      background: #0f172a;
-      border-bottom: 1px solid #1e293b;
-      backdrop-filter: blur(10px);
-    }
-    .nav-content {
-      max-width: 1280px;
-      margin: 0 auto;
-      padding: 14px 24px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-    .logo {
-      font-size: 22px;
-      font-weight: 800;
-      color: #fff;
-      text-decoration: none;
-      letter-spacing: -0.5px;
-    }
-    .nav-links {
-      display: flex;
-      gap: 24px;
-      align-items: center;
-    }
-    .nav-links a {
-      color: #94a3b8;
-      text-decoration: none;
-      font-size: 14px;
-      font-weight: 500;
-      transition: color 0.15s;
-    }
-    .nav-links a:hover {
-      color: #fff;
-    }
-    .nav-profile {
-      padding: 8px 18px;
-      border-radius: 10px;
-      background: #1e293b;
-      color: #fff;
-      border: 1px solid #334155;
-    }
-    .nav-profile.active {
-      background: #2563eb;
-      border-color: #2563eb;
-    }
-
     .page {
       max-width: 1280px;
       margin: 0 auto;
@@ -246,18 +182,20 @@ interface Listing {
       padding: 10px 16px;
       border: none;
       background: transparent;
-      color: #94a3b8;
-      font-weight: 500;
+      color: #000;
+      font-weight: 600;
       font-size: 14px;
       cursor: pointer;
       position: relative;
       transition: color 0.15s;
     }
     .tabs-nav button:hover {
-      color: #e2e8f0;
+      color: #111;
     }
     .tabs-nav button.active {
-      color: #fff;
+      color: #000;
+      background: #e2e8f0;
+      border-radius: 10px;
     }
     .tabs-nav button.active::after {
       content: '';
@@ -438,9 +376,40 @@ export class ProfileComponent implements OnInit {
     const rep = this.user?.reputation ?? 0;
     return `${rep.toFixed(1)} / 5.0`;
   }
+  statusLabel(status: string): string {
+    const key = (status || '').toUpperCase();
+    if (key === 'APPROVED_BY_ML') return 'aprobado';
+    if (key === 'PENDING') return 'pendiente';
+    return status;
+  }
+  formatPrice(price: string | number): string {
+    const numeric = typeof price === 'string' ? parseFloat(price) : price;
+    if (isNaN(numeric)) return '$0';
+    const clp = Math.round(numeric);
+    return new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(clp);
+  }
+  resolveSrc(listing: any): string {
+    if (!listing) return '';
+    const raw = Array.isArray(listing.images) ? listing.images[0] || '' : '';
+    if (!raw) {
+      const baseName = (listing?.title || '')
+        .toString()
+        .trim()
+        .replace(/[^a-zA-Z0-9_-]+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '')
+        .toLowerCase();
+      return `http://127.0.0.1:8000/api/listings/assets/listings/${encodeURIComponent(baseName + '.png')}`;
+    }
+    if (raw.startsWith('http://') || raw.startsWith('https://')) {
+      return raw;
+    }
+    const name = raw.split('/').pop() || raw;
+    return `http://127.0.0.1:8000/api/listings/assets/listings/${encodeURIComponent(name)}`;
+  }
   private base = 'http://127.0.0.1:8000/api/users';
   private listingsBase = 'http://127.0.0.1:8000/api/listings';
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, private auth: AuthService, private router: Router) {}
 
   ngOnInit() {
     this.http.get<any>(`${this.base}/profile/`).subscribe({
@@ -448,10 +417,17 @@ export class ProfileComponent implements OnInit {
         this.user = data;
         this.http.get<any[]>(`${this.listingsBase}/listings/?seller=${data.id}`).subscribe({
           next: (items: any) => (this.myListings = items || []),
-          error: (err: any) => console.error(err)
+          error: (err: any) => console.error(err),
         });
       },
-      error: (err: any) => console.error(err)
+      error: (err: any) => {
+        console.error(err);
+        const status = err?.status;
+        if (status === 401 || status === 403) {
+          this.auth.clearSession();
+          this.router.navigate(['/login']);
+        }
+      },
     });
   }
 }

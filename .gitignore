@@ -40,3 +40,4 @@ backend/media/
 .env
 .env.local
 .hermes/
+TEST_CREDENTIALS.txt

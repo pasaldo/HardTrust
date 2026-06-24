@@ -53,22 +53,22 @@ interface Listing {
         <div class="gallery">
           <div class="main-image">
             <img
-              *ngIf="item.images?.length; else noImage"
-              [src]="item.images[0]"
+              *ngIf="listing as item; else noImage"
+              [src]="resolveSrc(item)"
               [alt]="item.title"
             />
             <ng-template #noImage>
               <div class="no-image"><span>Sin imagen</span></div>
             </ng-template>
           </div>
-          <div class="thumbnails" *ngIf="item && item.images && item.images.length > 1">
-            <img
-              *ngFor="let img of item.images"
-              [src]="img"
-              [alt]="item.title"
-              class="thumb"
-            />
-          </div>
+          <div class="thumbnails" *ngIf="listing && listing.images && listing.images.length > 1">
+              <img
+                *ngFor="let img of listing.images"
+                [src]="resolveSrc(item, img)"
+                [alt]="listing.title"
+                class="thumb"
+              />
+            </div>
         </div>
 
         <div class="product-info">
@@ -77,11 +77,11 @@ interface Listing {
             <div class="product-meta-row">
               <span class="badge category-badge">{{ item.category_name }}</span>
               <span class="badge condition-badge">{{ item.hardware_type }}</span>
-              <span class="badge state-badge" [class.pending]="item.status === 'PENDING'" [class.active]="item.status === 'ACTIVE'">
-                {{ item.status }}
+              <span class="badge state-badge" [class.pending]="item.status === 'PENDING'" [class.active]="item.status === 'ACTIVE' || item.status === 'APPROVED_BY_ML'">
+                {{ statusLabel(item.status) }}
               </span>
             </div>
-            <h2 class="product-price">{{ item.price }} CLP</h2>
+            <h2 class="product-price">{{ formatPrice(item.price) }} CLP</h2>
             <p class="product-desc">{{ item.description }}</p>
 
             <div class="specs-card">
@@ -231,7 +231,7 @@ interface Listing {
     .main-image img {
       width: 100%;
       height: 100%;
-      object-fit: cover;
+      object-fit: contain;
     }
     .thumbnails {
       display: flex;
@@ -241,7 +241,7 @@ interface Listing {
     .thumb {
       width: 72px;
       height: 72px;
-      object-fit: cover;
+      object-fit: contain;
       border-radius: 10px;
       border: 2px solid #334155;
       cursor: pointer;
@@ -268,10 +268,15 @@ interface Listing {
     }
     .product-title {
       font-size: 26px;
-      font-weight: 700;
-      color: #f1f5f9;
+      font-weight: 800;
+      color: #000;
       margin: 0;
       line-height: 1.3;
+      letter-spacing: -0.3px;
+      background: #fff;
+      padding: 14px 18px;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
     }
     .product-meta-row {
       display: flex;
@@ -311,14 +316,23 @@ interface Listing {
     .product-price {
       font-size: 32px;
       font-weight: 800;
-      color: #fff;
+      color: #000;
       margin: 0;
+      background: #fff;
+      padding: 12px 18px;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+      display: inline-block;
     }
     .product-desc {
-      color: #cbd5e1;
+      color: #e2e8f0;
       white-space: pre-wrap;
       line-height: 1.6;
       font-size: 15px;
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      border-radius: 14px;
+      padding: 16px;
     }
 
     .specs-card {
@@ -357,7 +371,7 @@ interface Listing {
 
     .seller-card {
       background: #0f172a;
-      border: 1px solid #1e293b;
+      border: 1px solid #334155;
       border-radius: 16px;
       padding: 20px;
       display: flex;
@@ -457,6 +471,39 @@ interface Listing {
 })
 export class ListingDetailComponent implements OnInit {
   listing: Listing | null = null;
+
+  formatPrice(price: string | number): string {
+    const numeric = typeof price === 'string' ? parseFloat(price) : price;
+    if (isNaN(numeric)) return '$0';
+    const clp = Math.round(numeric);
+    return new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(clp);
+  }
+
+  statusLabel(status: string): string {
+    const key = (status || '').toUpperCase();
+    if (key === 'APPROVED_BY_ML') return 'aprobado';
+    if (key === 'PENDING') return 'pendiente';
+    return status;
+  }
+
+  resolveSrc(listing: Listing, overrideSrc?: string): string {
+    const raw = overrideSrc ?? listing?.images?.[0] ?? '';
+    if (raw.startsWith('http://') || raw.startsWith('https://')) {
+      return raw;
+    }
+    const name = raw.split('/').pop() || '';
+    if (name) {
+      return `http://127.0.0.1:8000/api/listings/assets/listings/${encodeURIComponent(name)}`;
+    }
+    const baseName = (listing?.title || '')
+      .toString()
+      .trim()
+      .replace(/[^a-zA-Z0-9_-]+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
+      .toLowerCase();
+    return `http://127.0.0.1:8000/api/listings/assets/listings/${encodeURIComponent(baseName + '.png')}`;
+  }
 
   get initials(): string {
     const name = this.listing?.seller_name || '';

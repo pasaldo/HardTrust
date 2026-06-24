@@ -1,0 +1,79 @@
+{
+  "project": "HardTrust",
+  "saved_at": "2026-06-24T03:00:00-04:00",
+  "git_branch": "main",
+  "remote": "origin",
+  "status": "paused",
+  "services": {
+    "backend": {
+      "port": 8000,
+      "host": "0.0.0.0",
+      "status": "stopped",
+      "command": "python manage.py runserver 0.0.0.0:8000",
+      "notes": "Backend Django sirviendo assets y API REST"
+    },
+    "ml_service": {
+      "port": 8002,
+      "host": "0.0.0.0",
+      "status": "stopped",
+      "command": "PYTHONPATH=\"\" PYTHONHOME=\"\" venv/Scripts/python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8002",
+      "notes": "ML uvicorn service (Windows workaround)"
+    },
+    "frontend": {
+      "port": 4200,
+      "host": "0.0.0.0",
+      "status": "stopped",
+      "command": "ng serve --host 0.0.0.0 --port 4200",
+      "notes": "Angular frontend"
+    },
+    "postgres": {
+      "port": 5432,
+      "host": "localhost",
+      "status": "assumed_running",
+      "notes": "DB_NAME=hardtrust, DB_USER=postgres"
+    }
+  },
+  "urls": {
+    "frontend": "http://localhost:4200",
+    "backend": "http://127.0.0.1:8000/",
+    "backend_api": "http://127.0.0.1:8000/api/",
+    "ml": "http://127.0.0.1:8002/",
+    "health_ml": "http://127.0.0.1:8002/health"
+  },
+  "test_users": {
+    "vendedor@test.cl": {
+      "name": "Carlos Mendoza",
+      "rut": "12.345.678-5",
+      "phone": "+56 9 1234 5678"
+    },
+    "comprador@test.cl": {
+      "name": "Ana Rojas",
+      "rut": "23.456.789-2",
+      "phone": "+56 9 1234 5678"
+    }
+  },
+  "auth": {
+    "type": "JWT (SimpleJWT)",
+    "frontend_storage": "localStorage key: hardtrust_auth",
+    "login_endpoint": "/api/users/login/",
+    "profile_endpoint": "/api/users/profile/"
+  },
+  "endpoints": {
+    "listings_browse": "/api/listings/browse/",
+    "listings_list": "/api/listings/listings/",
+    "listings_category": "/api/listings/categories/",
+    "listings_brands": "/api/listings/brands/",
+    "listing_asset": "/api/listings/assets/listings/<filename>"
+  },
+  "css_theme": {
+    "header_bg": "#0f172a",
+    "section_bg": "#0b101c",
+    "cards_bg": "#0f172a",
+    "category_pill_bg": "#0f172a",
+    "category_pill_text": "#ffffff",
+    "category_pill_border_radius": "999px",
+    "footer_bg": "#0b0f19",
+    "footer_text": "#9aa3b2",
+    "footer_border": "#1f2933"
+  }
+}

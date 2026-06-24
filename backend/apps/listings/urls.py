@@ -10,4 +10,5 @@ urlpatterns = [
     path("browse/", views.ListingListCreate.as_view(), name="listing-list"),
     path("listings/", views.ListingListCreate.as_view(), name="listing-list-alt"),
     path("listings/<int:pk>/", views.ListingRetrieveUpdateDestroy.as_view(), name="listing-detail"),
+    path("assets/listings/<path:filename>", views.serve_listing_asset, name="listing-asset"),
 ]

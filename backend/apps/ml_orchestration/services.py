@@ -3,7 +3,7 @@ from typing import Dict, Tuple
 
 import requests
 
-ML_SERVICE_URL = os.getenv("ML_SERVICE_URL", "http://localhost:8001")
+ML_SERVICE_URL = os.getenv("ML_SERVICE_URL", "http://localhost:8002")
 ML_PREDICT_PATH = os.getenv("ML_PREDICT_PATH", "/predict")
 ML_REQUEST_TIMEOUT = float(os.getenv("ML_REQUEST_TIMEOUT", "2.0"))
 

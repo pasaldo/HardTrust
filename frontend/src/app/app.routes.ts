@@ -10,6 +10,7 @@ import { ProfileComponent } from './features/profile/profile.component';
 export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'listings' },
   { path: 'listings', component: ListingListComponent },
+  { path: 'category/:slug', component: ListingListComponent },
   { path: 'listings/:id', component: ListingDetailComponent },
   { path: 'chat', component: ConversationListComponent },
   { path: 'ml', component: MlPanelComponent },

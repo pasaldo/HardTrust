@@ -2,6 +2,8 @@ from rest_framework import generics, filters
 from rest_framework.response import Response
 from django.db import transaction
 from django.shortcuts import get_object_or_404
+from django.http import FileResponse, Http404
+from pathlib import Path
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.exceptions import ValidationError
 from apps.listings.models import Category, PhysicalCondition, Listing
@@ -78,6 +80,35 @@ class ListingListCreate(generics.ListAPIView):
         if vram:
             queryset = queryset.filter(description__icontains=f"VRAM: {vram} GB")
 
+        # Filtros especializados por tipo de hardware (basados en description)
+        socket = params.get("socket")
+        if socket:
+            queryset = queryset.filter(description__icontains=f"Socket: {socket}")
+
+        ram_type = params.get("ram_type")
+        if ram_type:
+            queryset = queryset.filter(description__icontains=f"Tipo: {ram_type}")
+
+        ram_ddr = params.get("ram_ddr")
+        if ram_ddr:
+            queryset = queryset.filter(description__icontains=ram_ddr)
+
+        ram_capacity = params.get("ram_capacity")
+        if ram_capacity:
+            queryset = queryset.filter(description__icontains=f"{ram_capacity} GB")
+
+        gpu_brand = params.get("gpu_brand")
+        if gpu_brand:
+            queryset = queryset.filter(brand__icontains=gpu_brand)
+
+        gpu_vram = params.get("gpu_vram")
+        if gpu_vram:
+            queryset = queryset.filter(description__icontains=f"VRAM: {gpu_vram} GB")
+
+        seller = params.get("seller")
+        if seller:
+            queryset = queryset.filter(seller__id=seller)
+
         return queryset
 
 
@@ -121,3 +152,16 @@ class ListingRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
     queryset = Listing.objects.select_related("seller", "category", "condition").all()
     serializer_class = ListingSerializer
     permission_classes = [AllowAny]
+
+
+def serve_listing_asset(request, filename):
+    base = Path(__file__).resolve().parent.parent.parent / "assets" / "images" / "listings"
+    safe = (base / filename).resolve()
+    if not str(safe).startswith(str(base.resolve())):
+        raise Http404
+    if not safe.exists():
+        raise Http404
+    ct = "image/png"
+    if safe.suffix.lower() == ".jpg" or safe.suffix.lower() == ".jpeg":
+        ct = "image/jpeg"
+    return FileResponse(open(safe, "rb"), content_type=ct)
