@@ -53,6 +53,8 @@ class Listing(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="PENDING")
     risk_level = models.CharField(max_length=10, choices=RISK_CHOICES, blank=True, null=True)
     ml_summary = models.TextField(blank=True)
+    analysis_message = models.TextField(blank=True, help_text="Mensaje de análisis de estafa mostrado en el detalle.")
+    analysis_sections = models.JSONField(blank=True, null=True, help_text="Secciones estructuradas del análisis ML.")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -65,3 +67,12 @@ class Listing(models.Model):
 
     def __str__(self):
         return f"{self.title} ({self.get_status_display()})"
+
+
+class SavedListing(models.Model):
+    user = models.ForeignKey(HardUser, on_delete=models.CASCADE, related_name="saved_listings")
+    listing = models.ForeignKey("Listing", on_delete=models.CASCADE, related_name="saved_by")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("user", "listing")

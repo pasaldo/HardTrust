@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 
 import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../../core/services/auth.service';
+import { SavedListingsService, SavedListingItem } from '../../core/services/saved-listings.service';
 import { Router } from '@angular/router';
 interface Listing {
   id: number;
@@ -48,9 +49,9 @@ interface Listing {
       </div>
 
       <div class="tabs-nav">
-        <button (click)="tab = 'listings'" [class.active]="tab === 'listings'">Mis publicaciones</button>
-        <button (click)="tab = 'saved'" [class.active]="tab === 'saved'">Guardados</button>
-        <button (click)="tab = 'messages'" [class.active]="tab === 'messages'">Mensajes</button>
+        <button (click)="tab = 'listings'">Mis publicaciones</button>
+        <button (click)="tab = 'saved'; loadSaved()">Guardados</button>
+        <button (click)="tab = 'messages'">Mensajes</button>
       </div>
 
       <div class="tab-content">
@@ -63,14 +64,25 @@ interface Listing {
                   <ng-template #noImg>
                     <div class="no-image">Sin imagen</div>
                   </ng-template>
-                  <span class="status-chip" [class.pending]="item.status === 'PENDING'" [class.active]="item.status === 'ACTIVE' || item.status === 'APPROVED_BY_ML'">
-                    {{ statusLabel(item.status) }}
+                  <span class="status-chip" [class.risk-low]="riskLevel(item) === 'Bajo'" [class.risk-medium]="riskLevel(item) === 'Medio'" [class.risk-high]="riskLevel(item) === 'Alto'">
+                    {{ riskLabel(item.risk_level || item.status) }}
                   </span>
                 </div>
                 <div class="card-body">
                   <h3 class="card-title">{{ item.title }}</h3>
                   <p class="card-brand">{{ item.brand }} {{ item.model }}</p>
                   <p class="card-price">{{ formatPrice(item.price) }}</p>
+                  <div class="action-row">
+                    <div class="icon-row">
+                      <button class="icon-btn edit" (click)="openEdit(item)" title="Modificar">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20h4L18.5 9.5a2.121 2.121 0 0 0-3-3L5 17v4z"/><line x1="14.5" y1="5.5" x2="19.5" y2="10.5"/></svg>
+                      </button>
+                      <button class="icon-btn delete" (click)="deleteListing(item.id)" title="Eliminar publicación">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                      </button>
+                    </div>
+                    <button class="action-btn sold" (click)="markSold(item.id)">Marcar como vendida</button>
+                  </div>
                 </div>
               </a>
             </article>
@@ -83,8 +95,34 @@ interface Listing {
           </ng-template>
         </section>
 
-        <section *ngIf="tab === 'saved'" class="empty-state">
-          <p>Seccion de publicaciones guardadas.</p>
+        <section *ngIf="tab === 'saved'">
+          <div class="grid" *ngIf="savedItems.length; else noSaved">
+            <article class="listing-card" *ngFor="let saved of savedItems">
+              <a [routerLink]="['/listings', saved.listing['id']]">
+                <div class="card-image">
+                  <img *ngIf="saved.listing['images']?.length; else noSavedImg" [src]="resolveSrc(saved.listing)" [alt]="saved.listing['title']" />
+                  <ng-template #noSavedImg>
+                    <div class="no-image">Sin imagen</div>
+                  </ng-template>
+                  <span class="status-chip" [class.risk-low]="riskLevel(saved.listing) === 'Bajo'" [class.risk-medium]="riskLevel(saved.listing) === 'Medio'" [class.risk-high]="riskLevel(saved.listing) === 'Alto'">
+                    {{ riskLabel(saved.listing['risk_level'] || saved.listing['status']) }}
+                  </span>
+                  <button class="remove-saved-btn" (click)="unsave(saved.id)" title="Eliminar de guardados">✕</button>
+                </div>
+                <div class="card-body">
+                  <h3 class="card-title">{{ saved.listing['title'] }}</h3>
+                  <p class="card-brand">{{ saved.listing['category_name'] || saved.listing['category'] }}</p>
+                  <p class="card-price">{{ formatPrice(saved.listing['price']) }}</p>
+                </div>
+              </a>
+            </article>
+          </div>
+          <ng-template #noSaved>
+            <div class="empty-state">
+              <p>No tienes publicaciones guardadas.</p>
+              <a routerLink="/listings" class="cta-link">Explorar publicaciones</a>
+            </div>
+          </ng-template>
         </section>
 
         <section *ngIf="tab === 'messages'" class="empty-state">
@@ -269,8 +307,76 @@ interface Listing {
       background: #14532d;
       color: #86efac;
     }
+    .status-chip.risk-low {
+      background: #14532d;
+      color: #86efac;
+    }
+    .status-chip.risk-medium {
+      background: #854d0e;
+      color: #fef08a;
+    }
+    .status-chip.risk-high {
+      background: #7f1d1d;
+      color: #fecaca;
+    }
     .card-body {
       padding: 14px;
+    }
+    .action-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      flex-direction: column;
+      align-items: center;
+    }
+    .icon-row {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+    }
+    .action-btn {
+      border: none;
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      color: #fff;
+      background: #14532d;
+      transition: filter 0.15s, transform 0.05s;
+    }
+    .action-btn:hover {
+      filter: brightness(1.1);
+    }
+    .icon-btn {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      border: 1px solid #334155;
+      background: transparent;
+      color: #94a3b8;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+    .icon-btn svg {
+      width: 18px;
+      height: 18px;
+      stroke: currentColor;
+    }
+    .icon-btn.edit:hover {
+      border-color: #2563eb;
+      color: #2563eb;
+      background: rgba(37, 99, 235, 0.12);
+    }
+    .icon-btn.delete:hover {
+      border-color: #7f1d1d;
+      color: #fecaca;
+      background: rgba(127, 29, 29, 0.18);
     }
     .card-title {
       margin: 0 0 6px;
@@ -291,6 +397,28 @@ interface Listing {
       font-size: 17px;
       font-weight: 700;
       color: #fff;
+    }
+
+    .remove-saved-btn {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      border: none;
+      background: rgba(15, 23, 42, 0.85);
+      color: #e2e8f0;
+      cursor: pointer;
+      font-size: 14px;
+      line-height: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .remove-saved-btn:hover {
+      background: #7f1d1d;
+      color: #fecaca;
     }
 
     .empty-state {
@@ -361,6 +489,8 @@ export class ProfileComponent implements OnInit {
   tab = 'listings';
   user: any = null;
   myListings: Listing[] = [];
+  savedItems: SavedListingItem[] = [];
+  loadingSaved = false;
   get initials() {
     const fn = (this.user?.first_name || '').charAt(0).toUpperCase();
     const ln = (this.user?.last_name || '').charAt(0).toUpperCase();
@@ -381,6 +511,25 @@ export class ProfileComponent implements OnInit {
     if (key === 'APPROVED_BY_ML') return 'aprobado';
     if (key === 'PENDING') return 'pendiente';
     return status;
+  }
+
+  riskLabel(risk: string): string {
+    const key = (risk || '').toUpperCase();
+    if (key === 'BAJO') return 'Riesgo Bajo';
+    if (key === 'MEDIO') return 'Riesgo Medio';
+    if (key === 'ALTO') return 'Riesgo Alto';
+    return risk || 'N/D';
+  }
+
+  riskLevel(item: any): string {
+    const raw = (item.risk_level || item.status || '').toString();
+    const key = raw.toUpperCase();
+    if (key === 'BAJO') return 'Bajo';
+    if (key === 'MEDIO') return 'Medio';
+    if (key === 'ALTO') return 'Alto';
+    if (key === 'APPROVED_BY_ML') return 'Bajo';
+    if (key === 'PENDING') return 'Medio';
+    return 'Medio';
   }
   formatPrice(price: string | number): string {
     const numeric = typeof price === 'string' ? parseFloat(price) : price;
@@ -409,7 +558,12 @@ export class ProfileComponent implements OnInit {
   }
   private base = 'http://127.0.0.1:8000/api/users';
   private listingsBase = 'http://127.0.0.1:8000/api/listings';
-  constructor(private http: HttpClient, private auth: AuthService, private router: Router) {}
+  constructor(
+    private http: HttpClient,
+    private auth: AuthService,
+    private router: Router,
+    private saved: SavedListingsService,
+  ) {}
 
   ngOnInit() {
     this.http.get<any>(`${this.base}/profile/`).subscribe({
@@ -429,5 +583,68 @@ export class ProfileComponent implements OnInit {
         }
       },
     });
+  }
+
+  loadSaved(): void {
+    if (!this.auth.loadSession() || this.loadingSaved) {
+      return;
+    }
+    this.loadingSaved = true;
+    this.saved.list().subscribe({
+      next: (res: any) => {
+        console.log('Saved listing raw response:', res);
+        const items = Array.isArray(res)
+          ? res
+          : Array.isArray(res?.results)
+            ? res.results
+            : [];
+        this.savedItems = items as SavedListingItem[];
+        this.loadingSaved = false;
+      },
+      error: (err: any) => {
+        console.error('Saved listing error:', err);
+        const status = err?.status;
+        if (status === 401 || status === 403) {
+          this.auth.clearSession();
+          this.router.navigate(['/login']);
+        }
+        this.loadingSaved = false;
+      },
+    });
+  }
+
+  unsave(savedId: number): void {
+    if (!this.auth.loadSession()) {
+      this.router.navigate(['/login']);
+      return;
+    }
+    this.http.delete(`${this.listingsBase}/saved/${savedId}/`).subscribe({
+      next: () => this.loadSaved(),
+      error: (err: any) => console.error('unsave error:', err),
+    });
+  }
+
+  deleteListing(id: number): void {
+    if (!this.auth.loadSession() || !confirm('¿Eliminar esta publicación?')) return;
+    this.http.delete(`${this.listingsBase}/my-listings/${id}/delete/`).subscribe({
+      next: () => (this.myListings = this.myListings.filter((l) => l.id !== id)),
+      error: (err: any) => console.error('deleteListing error:', err),
+    });
+  }
+
+  markSold(id: number): void {
+    if (!this.auth.loadSession()) return;
+    this.http.post(`${this.listingsBase}/my-listings/${id}/mark-sold/`, {}).subscribe({
+      next: (res: any) => {
+        const listing = this.myListings.find((l) => l.id === id);
+        if (listing) listing.status = res.status;
+      },
+      error: (err: any) => console.error('markSold error:', err),
+    });
+  }
+
+  openEdit(listing: Listing): void {
+    // por ahora navega al detalle; o luego se puede abrir un modal inline
+    this.router.navigate(['/listings', listing.id]);
   }
 }

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Category, PhysicalCondition, Listing
+from .models import Category, PhysicalCondition, Listing, SavedListing
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -39,6 +39,9 @@ class ListingSerializer(serializers.ModelSerializer):
             "price",
             "status",
             "risk_level",
+            "ml_summary",
+            "analysis_message",
+            "analysis_sections",
             "images",
             "category",
             "category_name",
@@ -60,3 +63,12 @@ class ListingSerializer(serializers.ModelSerializer):
         if not user:
             return None
         return f"{user.first_name} {user.last_name}".strip()
+
+
+class SavedListingSerializer(serializers.ModelSerializer):
+    listing = ListingSerializer(read_only=True)
+    class Meta:
+        model = SavedListing
+        fields = ["id", "user", "listing", "created_at"]
+        read_only_fields = ["user"]
+

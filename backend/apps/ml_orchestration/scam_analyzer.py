@@ -1,43 +1,6 @@
-from fastapi import FastAPI
-from pydantic import BaseModel
-
-app = FastAPI(title="HardTrust ML Service")
-
-
-class PredictRequest(BaseModel):
-    title: str
-    description: str
-    price: float
-    seller_reputation: float
-    images_count: int
-    category: str | None = None
-    hardware_type: str | None = None
-    marketplace_prices: dict | None = None
-
-
-class PredictResponse(BaseModel):
-    risk_level: str
-    ml_summary: str
-
-
-@app.get("/health")
-def health():
-    return {"status": "ok"}
-
-
-@app.post("/predict", response_model=PredictResponse)
-def predict_risk(payload: PredictRequest):
-    result = _evaluate(
-        title=payload.title,
-        description=payload.description,
-        price=payload.price,
-        seller_reputation=payload.seller_reputation,
-        images_count=payload.images_count,
-        category=payload.category,
-        hardware_type=payload.hardware_type,
-        marketplace_prices=payload.marketplace_prices or {},
-    )
-    return PredictResponse(**result)
+import json
+import math
+from typing import Dict, Tuple
 
 
 def _mean(values):
@@ -54,33 +17,33 @@ def _std(values):
     return math.sqrt(variance)
 
 
-import math
-
-
-def _evaluate(
+def analyze_listing(
     *,
-    title,
-    description,
-    price,
-    seller_reputation,
-    images_count,
-    category,
-    hardware_type,
-    marketplace_prices,
-):
+    price: float,
+    category: str,
+    hardware_type: str,
+    seller_reputation: float,
+    images_count: int,
+    marketplace_prices: Dict[str, list],
+) -> Tuple[str, str]:
+    """
+    Analiza un listing y determina si es potencialmente una estafa.
+    marketplace_prices: diccionario con clave category/hardware_type -> lista de precios.
+    """
     price = max(price, 0.0)
     reputation = max(seller_reputation, 0.0)
     images_count = max(images_count, 0)
 
+    # Estadísticas de referencia
     key = (category or "").strip().lower() or (hardware_type or "").strip().lower()
     ref_prices = marketplace_prices.get(key, [])
-    ref_mean = price if not ref_prices else _mean(ref_prices)
-    ref_std = 0.0 if len(ref_prices) < 2 else _std(ref_prices)
+    ref_mean = _mean(ref_prices) if ref_prices else price
+    ref_std = _std(ref_prices) if ref_prices else 0.0
 
     messages = []
     signals = []
 
-    # 1) Precio
+    # 1) Análisis de precio
     if ref_prices and price > 0:
         deviation = ref_std if ref_std > 0 else max(ref_mean * 0.15, 1.0)
         diff = price - ref_mean
@@ -102,7 +65,7 @@ def _evaluate(
     else:
         messages.append("Sin datos de mercado suficientes para comparar el precio.")
 
-    # 2) Reputación
+    # 2) Análisis de reputación
     if reputation >= 4.5:
         messages.append("La reputación del vendedor es muy alta.")
         signals.append("reputacion_muy_alta")
@@ -112,7 +75,7 @@ def _evaluate(
     else:
         messages.append("La reputación del vendedor es moderada.")
 
-    # 3) Imágenes
+    # 3) Análisis de imágenes
     if images_count == 0:
         messages.append("No hay imágenes del producto.")
         signals.append("sin_imagenes")
@@ -122,16 +85,11 @@ def _evaluate(
     else:
         messages.append("Cantidad de imágenes adecuada.")
 
+    # 4) Clasificación final
     scam_signals = sum(
         1
         for s in signals
-        if s
-        in {
-            "precio_elevado",
-            "reputacion_muy_baja",
-            "sin_imagenes",
-            "imagen_insuficiente",
-        }
+        if s in {"precio_elevado", "reputacion_muy_baja", "sin_imagenes", "imagen_insuficiente"}
     )
     if scam_signals >= 2:
         risk = "Alto"
@@ -140,16 +98,45 @@ def _evaluate(
     else:
         risk = "Bajo"
 
-    summary = "Análisis de seguridad: " + " ".join(messages)
-    if risk == "Alto":
-        summary += " Posibles indicios de estafa. Se recomienda extremar precauciones."
-    elif risk == "Medio":
-        summary += " Existen factores de riesgo. Proceder con cautela."
+    recommendation = (
+        "Posibles indicios de estafa. Se recomienda extremar precauciones."
+        if risk == "Alto"
+        else (
+            "Existen factores de riesgo. Proceder con cautela."
+            if risk == "Medio"
+            else "La publicación parece legítima."
+        )
+    )
+
+    sections = [
+        {
+            "title": "Precio",
+            "items": [m for m in messages if "precio" in m.lower() or "mercado" in m.lower()],
+        },
+        {
+            "title": "Reputación",
+            "items": [m for m in messages if "reputación" in m.lower() or "reputacion" in m.lower()],
+        },
+        {
+            "title": "Imágenes",
+            "items": [m for m in messages if "imágen" in m.lower() or "imagen" in m.lower() or "Cantidad de imágenes" in m],
+        },
+        {
+            "title": "Recomendaciones",
+            "items": [recommendation],
+        },
+    ]
+    # Avoid empty sections; fallback to raw messages
+    if any(len(sec.get("items", [])) == 0 for sec in sections):
+        summary = "Análisis de seguridad: " + ". ".join(messages)
     else:
-        summary += " La publicación parece legítima."
+        summary = "Análisis de seguridad: " + ". ".join(
+            item for sec in sections for item in sec.get("items", [])
+        )
 
-    return {
-        "risk_level": risk,
-        "ml_summary": summary,
-    }
-
+    sections_payload = [
+        {"title": sec["title"], "content": ". ".join(sec["items"])}
+        for sec in sections
+        if sec.get("items")
+    ]
+    return risk, summary, sections_payload

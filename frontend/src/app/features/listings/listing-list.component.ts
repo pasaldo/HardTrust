@@ -52,8 +52,8 @@ interface Listing {
                   <ng-template #placeholderImg>
                     <div class="placeholder-image">Sin imagen</div>
                   </ng-template>
-                  <span class="card-badge" [class.pending]="l.status === 'PENDING'" [class.active]="l.status === 'ACTIVE' || l.status === 'APPROVED_BY_ML'">
-                    {{ statusLabel(l.status) }}
+                  <span class="card-badge" [class.risk-low]="riskLevel(l) === 'Bajo'" [class.risk-medium]="riskLevel(l) === 'Medio'" [class.risk-high]="riskLevel(l) === 'Alto'">
+                    {{ riskLabel(l.risk_level || l.status) }}
                   </span>
                   <div class="card-badges-extra">
                     <span class="card-badge-verified">Vendedor verificado</span>
@@ -88,8 +88,8 @@ interface Listing {
                   <ng-template #placeholderImg2>
                     <div class="placeholder-image">Sin imagen</div>
                   </ng-template>
-                  <span class="card-badge" [class.pending]="l.status === 'PENDING'" [class.active]="l.status === 'ACTIVE' || l.status === 'APPROVED_BY_ML'" style="top:8px;right:8px;">
-                    {{ statusLabel(l.status) }}
+                  <span class="card-badge" [class.risk-low]="riskLevel(l) === 'Bajo'" [class.risk-medium]="riskLevel(l) === 'Medio'" [class.risk-high]="riskLevel(l) === 'Alto'" style="top:8px;right:8px;">
+                    {{ riskLabel(l.risk_level || l.status) }}
                   </span>
                   <div class="card-badges-extra">
                     <span class="card-badge-verified">Vendedor verificado</span>
@@ -153,8 +153,8 @@ interface Listing {
                 <ng-template #placeholderImg3>
                   <div class="placeholder-image">Sin imagen</div>
                 </ng-template>
-                <span class="card-badge" [class.pending]="l.status === 'PENDING'" [class.active]="l.status === 'ACTIVE' || l.status === 'APPROVED_BY_ML'">
-                  {{ statusLabel(l.status) }}
+                <span class="card-badge" [class.risk-low]="riskLevel(l) === 'Bajo'" [class.risk-medium]="riskLevel(l) === 'Medio'" [class.risk-high]="riskLevel(l) === 'Alto'">
+                  {{ riskLabel(l.risk_level || l.status) }}
                 </span>
                 <div class="card-badges-extra">
                   <span class="card-badge-verified">Vendedor verificado</span>
@@ -577,6 +577,18 @@ interface Listing {
       background: #854d0e;
       color: #fef08a;
     }
+    .card-badge.risk-low {
+      background: #14532d;
+      color: #86efac;
+    }
+    .card-badge.risk-medium {
+      background: #854d0e;
+      color: #fef08a;
+    }
+    .card-badge.risk-high {
+      background: #7f1d1d;
+      color: #fecaca;
+    }
     .card-badge.pending {
       background: #854d0e;
       color: #fef08a;
@@ -908,6 +920,25 @@ export class ListingListComponent implements OnInit {
     if (key === 'APPROVED_BY_ML') return 'aprobado';
     if (key === 'PENDING') return 'pendiente';
     return status;
+  }
+
+  riskLabel(risk: string): string {
+    const key = (risk || '').toUpperCase();
+    if (key === 'BAJO') return 'Riesgo Bajo';
+    if (key === 'MEDIO') return 'Riesgo Medio';
+    if (key === 'ALTO') return 'Riesgo Alto';
+    return risk || 'N/D';
+  }
+
+  riskLevel(item: Listing): string {
+    const raw = (item.risk_level || item.status || '').toString();
+    const key = raw.toUpperCase();
+    if (key === 'BAJO') return 'Bajo';
+    if (key === 'MEDIO') return 'Medio';
+    if (key === 'ALTO') return 'Alto';
+    if (key === 'APPROVED_BY_ML') return 'Bajo';
+    if (key === 'PENDING') return 'Medio';
+    return 'Medio';
   }
 
   resolveSrc(listing: Listing): string {

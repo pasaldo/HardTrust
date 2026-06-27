@@ -11,4 +11,10 @@ urlpatterns = [
     path("listings/", views.ListingListCreate.as_view(), name="listing-list-alt"),
     path("listings/<int:pk>/", views.ListingRetrieveUpdateDestroy.as_view(), name="listing-detail"),
     path("assets/listings/<path:filename>", views.serve_listing_asset, name="listing-asset"),
+    path("saved/", views.SavedListingsList.as_view(), name="saved-listings"),
+    path("saved/toggle/<int:pk>/", views.SavedToggle.as_view(), name="saved-toggle"),
+    path("saved/<int:pk>/", views.SavedDelete.as_view(), name="saved-delete"),
+    path("my-listings/<int:pk>/delete/", views.MyListingDelete.as_view(), name="my-listing-delete"),
+    path("my-listings/<int:pk>/mark-sold/", views.MyListingMarkSold.as_view(), name="my-listing-mark-sold"),
+    path("my-listings/<int:pk>/update/", views.MyListingUpdate.as_view(), name="my-listing-update"),
 ]

@@ -6,8 +6,8 @@ from django.http import FileResponse, Http404
 from pathlib import Path
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.exceptions import ValidationError
-from apps.listings.models import Category, PhysicalCondition, Listing
-from apps.listings.serializers import CategorySerializer, CategoryCreateSerializer, PhysicalConditionSerializer, ListingSerializer
+from apps.listings.models import Category, PhysicalCondition, Listing, SavedListing
+from apps.listings.serializers import CategorySerializer, CategoryCreateSerializer, PhysicalConditionSerializer, ListingSerializer, SavedListingSerializer
 from apps.ml_orchestration.services import evaluate_listing
 from apps.ml_orchestration.models import ListingRiskEvaluation
 
@@ -152,6 +152,70 @@ class ListingRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
     queryset = Listing.objects.select_related("seller", "category", "condition").all()
     serializer_class = ListingSerializer
     permission_classes = [AllowAny]
+
+
+class SavedListingsList(generics.ListAPIView):
+    serializer_class = SavedListingSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return SavedListing.objects.filter(user=self.request.user).select_related("listing").order_by("-created_at")
+
+
+class SavedToggle(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = SavedListingSerializer
+
+    def post(self, request, *args, **kwargs):
+        listing = get_object_or_404(Listing, pk=kwargs.get("pk"))
+        saved_qs = SavedListing.objects.filter(user=request.user, listing=listing)
+        if saved_qs.exists():
+            saved_qs.delete()
+            return Response({"saved": False}, status=200)
+        SavedListing.objects.create(user=request.user, listing=listing)
+        return Response({"saved": True}, status=201)
+
+
+class SavedDelete(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = SavedListingSerializer
+
+    def delete(self, request, *args, **kwargs):
+        saved = get_object_or_404(SavedListing, pk=kwargs.get("pk"), user=request.user)
+        saved.delete()
+        return Response(status=204)
+
+
+class MyListingDelete(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, *args, **kwargs):
+        listing = get_object_or_404(Listing, pk=kwargs.get("pk"), seller=request.user)
+        listing.delete()
+        return Response(status=204)
+
+
+class MyListingMarkSold(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        listing = get_object_or_404(Listing, pk=kwargs.get("pk"), seller=request.user)
+        listing.status = "SOLD"
+        listing.save(update_fields=["status", "updated_at"])
+        return Response({"status": listing.status}, status=200)
+
+
+class MyListingUpdate(generics.UpdateAPIView):
+    queryset = Listing.objects.select_related("seller", "category", "condition").all()
+    serializer_class = ListingSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Listing.objects.filter(seller=self.request.user)
+
+    def perform_update(self, serializer):
+        serializer.save()
+        return super().perform_update(serializer)
 
 
 def serve_listing_asset(request, filename):
